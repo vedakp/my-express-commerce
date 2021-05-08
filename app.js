@@ -1,9 +1,9 @@
 const express = require('express');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 const path = require('path');
 const mongoose = require('mongoose');
-const config = require('./config/database');
+const config = require('./config/config');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const ejs = require('ejs');
@@ -11,13 +11,23 @@ const ejs = require('ejs');
 
 //Connecting to mongodb
 mongoose.connect(config.database, {useNewUrlParser: true, useUnifiedTopology: true});
+const schema = new mongoose.Schema({
+    _id: String
+});
+schema.pre('save', function(next) {
+    this._id = this._id.toString();
+    next();
+  });
+  schema.pre('create', function(next) {
+    this._id = this._id.toString();
+    next();
+  });
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
     // we're connected!
     console.log("We're connected to Mongodb!");
 });
-
 
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -34,7 +44,6 @@ app.use(function (req, res, next) {
 
 //set routes
 //Routes
-const pages = require('./routes/v1/pages')
 const admin = require('./routes/v1/admin')
 const users = require('./routes/v1/users')
 

@@ -121,38 +121,51 @@ router.get('/get-users', middleware.authGard(['admin']),function(req,res){
         data['password'] = md5(data['password']);
     }
 
-    usersSchema.find({'username':data['username'], 'password':data['password']}).then((result)=>{
-        var date = new Date();
-        date.setDate(date.getDate() + 8);
+    usersSchema.findOne({'username':data['username'], 'password':data['password']},function (err, result) {
+        console.log("err",err);
+        console.log("result",result);
+        if(result){
 
-        usersSchema.findByIdAndUpdate(result._id,{
-            'auth.token': jwt.sign({ role : result['auth']['role'], _id:result._id, ttl: +new Date(date)}, config.token),
-            'auth.ttl': +new Date(date)
-        },{upsert:false,useFindAndModify:true}).then((updatedResult)=>{
-            result['auth']= {
-                role: result['auth']['role'],
-                token: jwt.sign({ role : result['auth']['role'], _id:result._id, ttl: +new Date(date)}, config.token),
-                ttl: +new Date(date)
-            }
-            
-            let response = {
-                status:'success',
-                data:result
-            }
-            res.send(response);
-        },err=>{
+            var date = new Date();
+            date.setDate(date.getDate() + 8);
+            console.dir(result);
+            usersSchema.findByIdAndUpdate(result._id,{
+                'auth.token': jwt.sign({ role : result['auth']['role'], _id:result._id, ttl: +new Date(date)}, config.token),
+                'auth.ttl': +new Date(date)
+            },{upsert:false,useFindAndModify:true}).then((updatedResult)=>{
+                result['auth']= {
+                    role: result['auth']['role'],
+                    token: jwt.sign({ role : result['auth']['role'], _id:result._id, ttl: +new Date(date)}, config.token),
+                    ttl: +new Date(date)
+                }
+                
+                let response = {
+                    status:'success',
+                    data:result
+                }
+                res.send(response);
+            },err=>{
+                response = {
+                    status:'failed',
+                    data:[],
+                    message:'Something went wrong!'
+                }
+                console.log(err);
+                res.status(400).send(response);
+            });
+        }else{
             response = {
                 status:'failed',
                 data:[],
-                message:'Something went wrong!'
+                message:'Invalid username or password!'
             }
             console.log(err);
             res.status(400).send(response);
-        });
+        }
 
         
     })
-},(req,res) => {
+},(err) => {
     let response = {
         status:'failed',
         data:[],

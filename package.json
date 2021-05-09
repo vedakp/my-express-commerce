@@ -23,6 +23,7 @@
     "express-session": "^1.17.1",
     "express-validator": "^6.11.0",
     "jsonwebtoken": "^8.5.1",
+    "md5": "^2.3.0",
     "mongoose": "^5.12.7"
   },
   "devDependencies": {

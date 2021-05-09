@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const usersSchema = require('../../models/usersSchema');
 const config = require('../../config/config');
 const jwt = require('jsonwebtoken');
-const middleware = require("../../config/middleware")
+const middleware = require("../../config/middleware");
+const md5 = require('md5');
 
 module.exports = router;
 
@@ -33,6 +34,12 @@ router.post('/create-user',(req, res) => {
 
     if(!req.body['roles']){
         res.status(400).send("User Role Required!");
+    }
+    
+    if(!req.body['password']){
+        res.status(400).send("Password Required!");
+    }else{
+        req.body['password'] = md5(req.body['password']);
     }
 
     var date = new Date();
@@ -73,12 +80,77 @@ router.post('/create-user',(req, res) => {
  * Access only to admin
  */
 router.get('/get-users', middleware.authGard(['admin']),function(req,res){
-    usersSchema.find({}).then((result)=>{
+    let queryparams = req.query;
+    usersSchema.find(queryparams).then((result)=>{
         let response = {
             status:'success',
             data:result
         }
         res.send(response);
+    })
+},(req,res) => {
+    let response = {
+        status:'failed',
+        data:[],
+        message:'Failed to fetch data'
+    }
+    res.status(400).send(response);
+})
+
+
+
+/**
+ * Signin 
+ * Access only to all anonymous users
+ */
+ router.post('/signin',(req,res)=>{
+    var response = {
+        status:'failed',
+        data:[],
+        message:'Username and Password is required'
+    }
+    var data = req.body;
+    
+    if(!data['username']){
+        res.status(400).send(response);
+    }
+
+    if(!data['password']){
+        res.status(400).send(response);
+    }else{
+        data['password'] = md5(data['password']);
+    }
+
+    usersSchema.find({'username':data['username'], 'password':data['password']}).then((result)=>{
+        var date = new Date();
+        date.setDate(date.getDate() + 8);
+
+        usersSchema.findByIdAndUpdate(result._id,{
+            'auth.token': jwt.sign({ role : result['auth']['role'], _id:result._id, ttl: +new Date(date)}, config.token),
+            'auth.ttl': +new Date(date)
+        },{upsert:false,useFindAndModify:true}).then((updatedResult)=>{
+            result['auth']= {
+                role: result['auth']['role'],
+                token: jwt.sign({ role : result['auth']['role'], _id:result._id, ttl: +new Date(date)}, config.token),
+                ttl: +new Date(date)
+            }
+            
+            let response = {
+                status:'success',
+                data:result
+            }
+            res.send(response);
+        },err=>{
+            response = {
+                status:'failed',
+                data:[],
+                message:'Something went wrong!'
+            }
+            console.log(err);
+            res.status(400).send(response);
+        });
+
+        
     })
 },(req,res) => {
     let response = {

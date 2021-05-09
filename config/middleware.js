@@ -16,8 +16,8 @@ const authGard = (allowed_roles) => {
              * Returns { role, ttl }
              */
             let authData = jwt.verify(req.headers.authorization.split(" ")[1], config.token);
-
-            if (authData['role'] && authData['role'].length > 0) {
+            var currentDate = +new Date();
+            if (authData['role'] && authData['role'].length > 0 && authData['ttl'] >=  currentDate) {
                 var flag = 0;
                 for (let i = 0; i < authData['role'].length; i++) {
 
@@ -33,10 +33,10 @@ const authGard = (allowed_roles) => {
                         _id:  authData['_id'],
                         'auth.token' : req.headers.authorization.split(" ")[1]
                     };
-                    console.log("Filter",filter);
+                    
                     usersSchema.findOne(filter, function (err, doc) {
                         if (err) {
-                            res.status(401).send("Unauthorized");
+                            res.status(401).send("Unauthorized User");
                         } else {
                             if (doc) {
                                 next();
@@ -48,13 +48,13 @@ const authGard = (allowed_roles) => {
                     });
 
                 } else {
-                    res.status(401).send("Unauthorized Role");
+                    res.status(401).send("Unauthorized User");
                 }
             } else {
-                res.status(401).send("Unauthorized");
+                res.status(401).send("Unauthorized User");
             }
         } else {
-            res.status(401).send("Unauthorized");
+            res.status(401).send("Unauthorized User");
         }
     }
 }
